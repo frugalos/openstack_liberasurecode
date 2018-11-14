@@ -25,33 +25,8 @@
 #ifndef _ALG_SIG_H
 #define _ALG_SIG_H
 
-typedef int (*galois_single_multiply_func)(int, int, int);
-typedef void (*galois_uninit_field_func)(int);
-
-struct jerasure_mult_routines {
-  galois_single_multiply_func galois_single_multiply;
-  galois_uninit_field_func galois_uninit_field;
-};
-
-#if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
-#define JERASURE_SONAME "libJerasure.dylib"
-#else
-#define JERASURE_SONAME "libJerasure.so"
-#endif
-
-typedef struct alg_sig_s
-{
-  int gf_w;
-  int sig_len;
-  struct jerasure_mult_routines mult_routines;
-  void *jerasure_sohandle;
-  int *tbl1_l;
-  int *tbl1_r;
-  int *tbl2_l;
-  int *tbl2_r;
-  int *tbl3_l;
-  int *tbl3_r;
-} alg_sig_t;
+struct alg_sig_s;
+typedef struct alg_sig_s alg_sig_t;
 
 alg_sig_t *init_alg_sig(int sig_len, int gf_w);
 void destroy_alg_sig(alg_sig_t* alg_sig_handle);
