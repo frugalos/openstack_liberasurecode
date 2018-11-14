@@ -64,7 +64,7 @@ typedef int (*jerasure_make_decoding_bitmatrix_func)
     (int, int, int, int *, int *, int *, int *);
 typedef void (*jerasure_bitmatrix_dotprod_func)
     (gf2_t*, int, int, int *, int *, int,char **, char **, int, int);
-typedef void (*galois_uninit_field_func)(gf2_t*, int);
+typedef int (*galois_uninit_field_func)(gf2_t*, int);
 typedef gf2_t* (*galois_init_empty_func)();
 typedef void (*galois_destroy_func)(gf2_t*);
 

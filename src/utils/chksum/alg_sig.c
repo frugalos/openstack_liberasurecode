@@ -32,7 +32,7 @@
 #define GALOIS_UNINIT "galois_uninit_field"
 
 typedef int (*galois_single_multiply_func)(gf2_t*, int, int, int);
-typedef void (*galois_uninit_field_func)(gf2_t*, int);
+typedef int (*galois_uninit_field_func)(gf2_t*, int);
 typedef gf2_t* (*galois_init_empty_func)();
 typedef void (*galois_destroy_func)(gf2_t*);
 
@@ -81,7 +81,7 @@ galois_single_multiply_func get_galois_multi_func(void *handle) {
     return func_handle.fptr;
 }
 
-void stub_galois_uninit_field(gf2_t* g, int w){}
+int stub_galois_uninit_field(gf2_t* g, int w){ return 0; }
 
 galois_uninit_field_func get_galois_uninit_func(void *handle) {
     /*
