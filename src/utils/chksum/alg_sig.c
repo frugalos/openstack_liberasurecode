@@ -30,6 +30,9 @@
 #include <string.h>
 #define GALOIS_SINGLE_MULTIPLY "galois_single_multiply"
 #define GALOIS_UNINIT "galois_uninit_field"
+#if defined(STATIC_JERASURE)
+#include "jerasure.h"
+#endif
 
 typedef int (*galois_single_multiply_func)(gf2_t*, int, int, int);
 typedef int (*galois_uninit_field_func)(gf2_t*, int);
@@ -68,6 +71,7 @@ int valid_gf_w[] = { 8, 16, -1 };
 int valid_pairs[][2] = { { 8, 32}, {16, 32}, {16, 64}, {-1, -1} };
 
 galois_single_multiply_func get_galois_multi_func(void *handle) {
+#if !defined(STATIC_JERASURE)
     /*
      * ISO C forbids casting a void* to a function pointer.
      * Since dlsym return returns a void*, we use this union to
@@ -79,11 +83,15 @@ galois_single_multiply_func get_galois_multi_func(void *handle) {
     } func_handle = {.vptr = NULL};
     func_handle.vptr = dlsym(handle,  GALOIS_SINGLE_MULTIPLY);
     return func_handle.fptr;
+#else
+    return galois_single_multiply;
+#endif
 }
 
 int stub_galois_uninit_field(gf2_t* g, int w){ return 0; }
 
 galois_uninit_field_func get_galois_uninit_func(void *handle) {
+#if !defined(STATIC_JERASURE)
     /*
      * ISO C forbids casting a void* to a function pointer.
      * Since dlsym return returns a void*, we use this union to
@@ -95,31 +103,44 @@ galois_uninit_field_func get_galois_uninit_func(void *handle) {
     } func_handle = {.vptr = NULL};
     func_handle.vptr = dlsym(handle,  GALOIS_UNINIT);
     return func_handle.fptr;
+#else
+    return galois_uninit_field;
+#endif
 }
 
 static galois_init_empty_func get_galois_init_empty_func(void *handle) {
+#if !defined(STATIC_JERASURE)
     union {
         galois_init_empty_func fptr;
         void *vptr;
     } func_handle = {.vptr = NULL};
     func_handle.vptr = dlsym(handle,  "galois_init_empty");
     return func_handle.fptr;
+#else
+    return galois_init_empty;
+#endif
 }
 
 static galois_destroy_func get_galois_destroy_func(void *handle) {
+#if !defined(STATIC_JERASURE)
     union {
         galois_destroy_func fptr;
         void *vptr;
     } func_handle = {.vptr = NULL};
     func_handle.vptr = dlsym(handle,  "galois_destroy");
     return func_handle.fptr;
+#else
+    return galois_destroy;
+#endif
 }
 
 
-void *get_jerasure_sohandle()
+#if !defined(STATIC_JERASURE)
+static void *get_jerasure_sohandle()
 {
     return dlopen(JERASURE_SONAME, RTLD_LAZY | RTLD_LOCAL);
 }
+#endif
 
 int load_gf_functions(void *sohandle, struct jerasure_mult_routines *routines)
 {
@@ -276,13 +297,16 @@ alg_sig_t *init_alg_sig_w16(void *jerasure_sohandle, int sig_len)
 alg_sig_t *init_alg_sig(int sig_len, int gf_w)
 {
   int i=0;
+#if !defined(STATIC_JERASURE)
   void *jerasure_sohandle = get_jerasure_sohandle();
 
   if (NULL == jerasure_sohandle) {
     fprintf (stderr, "Could not open Jerasure backend.  Install Jerasure or fix LD_LIBRARY_PATH.  Passing.\n");
     return NULL;
   }
-
+#else
+  void *jerasure_sohandle = NULL;
+#endif
   while (valid_pairs[i][0] > -1) {
     if (gf_w == valid_pairs[i][0] && 
         sig_len == valid_pairs[i][1]) {
@@ -315,8 +339,9 @@ void destroy_alg_sig(alg_sig_t* alg_sig_handle)
 
   alg_sig_handle->mult_routines.galois_uninit_field(alg_sig_handle->g, alg_sig_handle->gf_w);
   alg_sig_handle->mult_routines.galois_destroy(alg_sig_handle->g);
+#if !defined(STATIC_JERASURE)
   dlclose(alg_sig_handle->jerasure_sohandle);
-
+#endif
   int num_components = alg_sig_handle->sig_len / alg_sig_handle->gf_w;
 
   free(alg_sig_handle->tbl1_l);

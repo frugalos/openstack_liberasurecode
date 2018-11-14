@@ -177,6 +177,10 @@ void* liberasurecode_backend_open(ec_backend_t instance)
 {
     if (NULL == instance)
         return NULL;
+#if defined(STATIC_JERASURE)
+    if (strncmp(instance->common.soname, "libJerasure", 11) == 0)
+        return (void *)-1;
+#endif
     /* Use RTLD_LOCAL to avoid symbol collisions */
     return dlopen(instance->common.soname, RTLD_LAZY | RTLD_LOCAL);
 }
@@ -185,10 +189,10 @@ int liberasurecode_backend_close(ec_backend_t instance)
 {
     if (NULL == instance || NULL == instance->desc.backend_sohandle)
         return 0;
-
+#if !defined(STATIC_JERASURE)
     dlclose(instance->desc.backend_sohandle);
     dlerror();    /* Clear any existing errors */
-
+#endif
     instance->desc.backend_sohandle = NULL;
     return 0;
 }

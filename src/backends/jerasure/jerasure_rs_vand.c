@@ -28,6 +28,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <jerasure.h>
+#include <reed_sol.h>
 
 #include "erasurecode.h"
 #include "erasurecode_backend.h"
@@ -237,6 +239,7 @@ static void * jerasure_rs_vand_init(struct ec_backend_args *args,
         }
      }
 
+#if !defined(STATIC_JERASURE)
      /*
      * ISO C forbids casting a void* to a function pointer.
      * Since dlsym return returns a void*, we use this union to
@@ -319,6 +322,17 @@ static void * jerasure_rs_vand_init(struct ec_backend_args *args,
     if (NULL == desc->galois_destroy) {
         goto error;
     }
+#else
+    desc->jerasure_matrix_encode = jerasure_matrix_encode;
+    desc->jerasure_matrix_decode = jerasure_matrix_decode;
+    desc->jerasure_make_decoding_matrix = jerasure_make_decoding_matrix;
+    desc->jerasure_matrix_dotprod = jerasure_matrix_dotprod;
+    desc->jerasure_erasures_to_erased = jerasure_erasures_to_erased;
+    desc->reed_sol_vandermonde_coding_matrix = reed_sol_vandermonde_coding_matrix;
+    desc->galois_uninit_field = galois_uninit_field;
+    desc->galois_init_empty = galois_init_empty;
+    desc->galois_destroy = galois_destroy;
+#endif
 
     desc->g = desc->galois_init_empty();
     if (NULL == desc->g) {
