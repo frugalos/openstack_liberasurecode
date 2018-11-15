@@ -314,7 +314,7 @@ static void * jerasure_rs_vand_init(struct ec_backend_args *args,
     }
 
     func_handle.vptr = NULL;
-    func_handle.vptr = dlsym(backend_sohandle, "galois_destroy_func");
+    func_handle.vptr = dlsym(backend_sohandle, "galois_destroy");
     desc->galois_destroy = func_handle.gdestroyp;
     if (NULL == desc->galois_destroy) {
         goto error;
