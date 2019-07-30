@@ -180,20 +180,33 @@ static int jerasure_rs_cauchy_reconstruct(void *desc, char **data, char **parity
             goto out;
         }
     } else {
-        /*
-         * If it is parity we are reconstructing, then just call decode.
-         * ToDo (KMG): We can do better than this, but this should perform just
-         * fine for most cases.  We can adjust the decoding matrix like we
-         * did with ISA-L.
-         */
-        jerasure_desc->jerasure_bitmatrix_decode(k, m, w,
-                                             jerasure_desc->bitmatrix, 
-                                             0, 
-                                             missing_idxs,
-                                             data, 
-                                             parity, 
-                                             blocksize, 
-                                             PYECC_CAUCHY_PACKETSIZE); 
+        int *decoding_row_orig = jerasure_desc->bitmatrix + k * w * w * (destination_idx - k);
+        int *decoding_row_prod;
+      
+        dm_ids = (int *) alloc_zeroed_buffer(sizeof(int) * k);
+        decoding_matrix = (int *) alloc_zeroed_buffer(sizeof(int *) * k * k * w * w);
+        erased = jerasure_desc->jerasure_erasures_to_erased(k, m, missing_idxs);
+        if (NULL == decoding_matrix || NULL == dm_ids || NULL == erased) {
+            goto out;
+        }
+
+        ret = jerasure_desc->jerasure_make_decoding_bitmatrix(k, m, w, 
+                                               jerasure_desc->bitmatrix,
+                                               erased, decoding_matrix, dm_ids);
+        if (ret != 0) {
+          goto out;
+        }
+
+        // TODO: stop calling directly, instead pack into jreasure_desc
+        // TODO: leaky
+        decoding_row_prod = jerasure_matrix_multiply(decoding_row_orig, decoding_matrix, w, k * w, k * w, k * w, 1);
+        if (decoding_row_prod == NULL) {
+          ret = -1;
+          goto out;
+        }
+        jerasure_desc->jerasure_bitmatrix_dotprod(k, w, 
+                                                  decoding_row_prod, dm_ids, destination_idx,
+                                                  data, parity, blocksize, PYECC_CAUCHY_PACKETSIZE);
     }
 
 out:
