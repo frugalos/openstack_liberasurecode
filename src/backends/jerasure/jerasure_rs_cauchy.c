@@ -147,6 +147,7 @@ static int jerasure_rs_cauchy_reconstruct(void *desc, char **data, char **parity
     int *erased = NULL;           /* k+m length list of erased frag ids */
     int *dm_ids = NULL;           /* k length list of fragment ids */
     int *decoding_matrix = NULL;  /* matrix for decoding */
+    int *decoding_row_prod = NULL; /* matrix row for decoding parity fragments */
 
     struct jerasure_rs_cauchy_descriptor *jerasure_desc = 
         (struct jerasure_rs_cauchy_descriptor*) desc;
@@ -181,8 +182,7 @@ static int jerasure_rs_cauchy_reconstruct(void *desc, char **data, char **parity
         }
     } else {
         int *decoding_row_orig = jerasure_desc->bitmatrix + k * w * w * (destination_idx - k);
-        int *decoding_row_prod;
-      
+
         dm_ids = (int *) alloc_zeroed_buffer(sizeof(int) * k);
         decoding_matrix = (int *) alloc_zeroed_buffer(sizeof(int *) * k * k * w * w);
         erased = jerasure_desc->jerasure_erasures_to_erased(k, m, missing_idxs);
@@ -190,29 +190,29 @@ static int jerasure_rs_cauchy_reconstruct(void *desc, char **data, char **parity
             goto out;
         }
 
-        ret = jerasure_desc->jerasure_make_decoding_bitmatrix(k, m, w, 
+        ret = jerasure_desc->jerasure_make_decoding_bitmatrix(k, m, w,
                                                jerasure_desc->bitmatrix,
                                                erased, decoding_matrix, dm_ids);
         if (ret != 0) {
           goto out;
         }
 
-        // TODO: stop calling directly, instead pack into jreasure_desc
-        // TODO: leaky
+        // Because in the patch jerasure is statically linked, this symbol is visible.
         decoding_row_prod = jerasure_matrix_multiply(decoding_row_orig, decoding_matrix, w, k * w, k * w, k * w, 1);
         if (decoding_row_prod == NULL) {
           ret = -1;
           goto out;
         }
-        jerasure_desc->jerasure_bitmatrix_dotprod(k, w, 
-                                                  decoding_row_prod, dm_ids, destination_idx,
-                                                  data, parity, blocksize, PYECC_CAUCHY_PACKETSIZE);
+        jerasure_desc->jerasure_bitmatrix_dotprod(k, w,
+                               decoding_row_prod, dm_ids, destination_idx,
+                               data, parity, blocksize, PYECC_CAUCHY_PACKETSIZE);
     }
 
 out:
     free(erased);
     free(decoding_matrix);
     free(dm_ids);
+    free(decoding_row_prod);
     
     return ret;
 }
