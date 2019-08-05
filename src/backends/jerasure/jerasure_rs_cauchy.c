@@ -104,6 +104,9 @@ struct jerasure_rs_cauchy_descriptor {
 static void free_rs_cauchy_desc(
         struct jerasure_rs_cauchy_descriptor *jerasure_desc );
 
+int *jerasure_bitmatrix_multiply(int *m1, int *m2, int r1, int c1,
+                                 int r2, int c2);
+
 
 static int jerasure_rs_cauchy_encode(void *desc, char **data, char **parity,
         int blocksize)
@@ -197,8 +200,7 @@ static int jerasure_rs_cauchy_reconstruct(void *desc, char **data, char **parity
           goto out;
         }
 
-        // Because in the patch jerasure is statically linked, this symbol is visible.
-        decoding_row_prod = jerasure_matrix_multiply(decoding_row_orig, decoding_matrix, w, k * w, k * w, k * w, 1);
+        decoding_row_prod = jerasure_bitmatrix_multiply(decoding_row_orig, decoding_matrix, w, k * w, k * w, k * w);
         if (decoding_row_prod == NULL) {
           ret = -1;
           goto out;
@@ -487,3 +489,28 @@ struct ec_backend_common backend_jerasure_rs_cauchy = {
                                            JERASURE_RS_CAUCHY_LIB_MINOR,
                                            JERASURE_RS_CAUCHY_LIB_REV),
 };
+
+// bitmatrix's counterpart of jerasure_matrix_multiply.
+// We implement this function because we don't want to depend on gf-complete, and therefore introduce unnecessary race conditions.
+// Semantically equivalent to jerasure_matrix_multiply(m1, m2, r1, c1, r2, c2, 1).
+int *jerasure_bitmatrix_multiply(int *m1, int *m2, int r1, int c1,
+                                 int r2, int c2)
+{
+  int *product, i, j, k;
+
+  product = (int *) malloc(sizeof(int)*r1*c2);
+  if (product == NULL) {
+    return NULL;
+  }
+
+  for (i = 0; i < r1*c2; i++) product[i] = 0;
+
+  for (i = 0; i < r1; i++) {
+    for (j = 0; j < c2; j++) {
+      for (k = 0; k < r2; k++) {
+        product[i*c2+j] ^= m1[i*c1+k] && m2[k*c2+j];
+      }
+    }
+  }
+  return product;
+}
